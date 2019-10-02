@@ -1,0 +1,31 @@
+Legend for NHL data
+source for data: http://inalitic.com/datasets/nhl%20player%20data.html
+
+SEASON - Year of the end of season for which the data is relevant
+PLAYER - Name of player
+AGE - Age of player during season
+TM - Three charachter code of players team
+POS - Position
+GP - Number of games played
+G - Goals scored
+GPG - Goals per game
+A - Assists
+PTS - Points tallied by player in season
+PlusMinus - Sum of "goals for" (+) and "goals against" (-) while on ice
+PIM - Penalties in minutes
+EVG - Goals scored while even
+PPG - Goals scored in powerplay
+SHG - Goals scored while shorthanded
+GWG - Game winning goals
+EVA - Assists while even
+PPA - Assists while in powerplay
+SHA - Assists while shorthanded
+S - Shots on goal
+S_perc - G/S if S = 0 -> S_perc = 0
+TOI - Total time on ice
+ATOI - Average time on ice per game
+BLK - Number of blocked shots
+HIT - Number of hits
+FOwin - Number of faceoffs won
+FOloss - Number of faceoffs lost
+FO_perc - FOwin/(FOwin+FOloss) ...if FOwin+FOloss = 0 -> FO_perc = NA
