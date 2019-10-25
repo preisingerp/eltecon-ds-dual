@@ -1,0 +1,8 @@
+Az általunk vizsgált kérdés az volt, hogy van-e hatása jégkorongban annak, hogy milyen pozícióban játszik egy játékos,
+arra, hogy mennyi pontot (gólok és gólpasszok összege) szerez egy szezonban.
+A vizsgálatból az derül ki, hogy van különbség: A hátvédek jóval kevesebb pontot szereznek, mint a csatárok.
+Míg a csatároknál is a centerek szerzik a legtöbb pontot.
+
+Szerintünk ez tükrözi a valóságot, hiszen a csatárok kerülnek többször gólhelyzetbe és a center feladata elsősorban a
+kapu vonalában támadni. Valamint gyakran a technikásabb és ügyesebb játékosokból lesznek centerek, így ez is alátámasztja
+azt, hogy nekik kell több pontot szerezni.
