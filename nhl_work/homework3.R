@@ -44,7 +44,7 @@ CI_h_D = quantile(temp$points_scored, 0.975)
 
 # Creating plot, with confidence intervals
 ggplot(bootstrapped_stats, aes(points_scored, fill = as.factor(Pos))) + 
-  geom_histogram(alpha = 0.7) +
+  geom_histogram(alpha = 0.7, position = "dodge", bins = 50) +
   theme_minimal() +
   labs(x = "Average points scored", y = "Number of players") +
   geom_vline(xintercept = CI_l_C, color = "#fa9f99", linetype = "dashed") +
