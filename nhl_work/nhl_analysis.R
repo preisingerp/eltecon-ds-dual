@@ -1,6 +1,6 @@
 # library(readxl)
 library(data.table)
-library(chron)
+#library(chron)
 library(ggplot2)
 
 # skater_stats <- read_excel("nhl_data/nhl_skaterstats.xlsx", sheet = 1)
@@ -9,7 +9,7 @@ library(ggplot2)
 # pos_list <- read_excel("nhl_data/nhl_skaterstats.xlsx", sheet = 4)
 skater_stats <- fread("nhl_data/skater_stats.csv")
 
-summary(skater_stats)
+# summary(skater_stats)
 
 # Delete col "V1"
 skater_stats$V1 <- NULL
@@ -28,13 +28,13 @@ cols_to_convert <- c("G", "PTS", "PlusMinus", "A", "PIM", "EVG", "PPG", "SHG", "
 skater_stats[, (cols_to_convert) := lapply(.SD, as.numeric), .SDcols = cols_to_convert]
 
 # Converting to times
-skater_stats[, ATOI := paste0("00:", ATOI)]                # needs to be converted to hours first
-skater_stats[, ATOI := times(ATOI)]                        # special numeric type for time
-skater_stats$TOI = skater_stats$ATOI*skater_stats$GP       # setting TOI from ATOI and GP to have time format
+# skater_stats[, ATOI := paste0("00:", ATOI)]                # needs to be converted to hours first
+# skater_stats[, ATOI := times(ATOI)]                        # special numeric type for time
+# skater_stats$TOI = skater_stats$ATOI*skater_stats$GP     # setting TOI from ATOI and GP to have time format
 
-# skater_stats$TOI = gsub(",", "", skater_stats$TOI) delete ","-s 
-# skater_stats[, TOI := as.numeric(TOI)]                 in case time format is not needed
-
+skater_stats$TOI = gsub(",", "", skater_stats$TOI)         # delete ","-s 
+skater_stats[, TOI := as.numeric(TOI)]                     #in case time format is not needed
+skater_stats[, ATOI := TOI/GP]
 
 # Changing between NA and 0 to make sense (percentages to NA if there is division with 0, and FOwin/loss to NA if both are 0)
 skater_stats$G[is.na(skater_stats$G)] <- 0
@@ -55,6 +55,8 @@ skater_stats$BLK[is.na(skater_stats$BLK)] <- 0
 skater_stats$HIT[is.na(skater_stats$HIT)] <- 0
 skater_stats$FOwin[is.na(skater_stats$FO_perc)] <- NA
 skater_stats$FOloss[is.na(skater_stats$FO_perc)] <- NA
+
+write.csv(skater_stats, file = "clean_nhl.csv")
 
 summary(skater_stats)
 
