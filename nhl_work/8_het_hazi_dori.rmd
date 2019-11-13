@@ -6,7 +6,7 @@ output: html_document
 ```{R}
 library(data.table)
 library(ggplot2)
-skater <- fread("data/clean_nhl.csv")
+skater <- fread("../nhl_data/clean_nhl.csv")
 ```
 #A feladat során azt próbáljuk megjósolni, hogy az adott játékos várhatóan hány gólt (G) fog szerezni. Ehhez TOI (total time on ice by that player in season) és a PIM (penalties in minutes/player in season) magyarázó változókat használjuk.
 
@@ -32,7 +32,7 @@ residuals <- data.table(residuals = regr$residuals, fitted = regr$fitted)
 ggplot(residuals, aes(fitted, residuals)) + geom_point(alpha = .3) +
 theme_minimal()
 ```
-#A hibatagok nem tudom, hogy randomnak tűnnek e. Mivel a PIM nem tűnik lineárisan összefüggőnek G-vel, hozzáadunk PIM négyzetet. 
+#A hibatagok nem tudom, hogy randomnak tűnnek-e. Mivel a PIM nem tűnik lineárisan összefüggőnek G-vel, hozzáadunk PIM négyzetet. 
 
 ```{R}
 regr <- lm(formula = G ~ TOI + PIM + I(PIM^2), data = skater)
