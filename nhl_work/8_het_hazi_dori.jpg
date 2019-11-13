@@ -1,0 +1,51 @@
+---
+title: "8. hét befejezés"
+output: html_document
+---
+# Adatok: projektes hokis adatok
+```{R}
+library(data.table)
+library(ggplot2)
+skater <- fread("data/clean_nhl.csv")
+```
+#A feladat során azt próbáljuk megjósolni, hogy az adott játékos várhatóan hány gólt (G) fog szerezni. Ehhez TOI (total time on ice by that player in season) és a PIM (penalties in minutes/player in season) magyarázó változókat használjuk.
+
+#Plots
+```{R}
+
+
+#is_c <- data.table[]  C, D, RW, LW--> ez egy POS dummy kezdemény, de belebonyolodtam, úgyhogy hagytam
+ggplot(skater, aes(TOI, G)) + geom_point() + theme_minimal()
+#ggplot(skater, aes(Pos, G)) + geom_point() + theme_minimal() --> dummys cucc
+ggplot(skater, aes(PIM, G)) + geom_point() + theme_minimal()
+ggplot(skater, aes(TOI, PIM)) + geom_point() + theme_minimal()
+```
+#Correlation
+```{R}
+cor(skater$TOI,skater$PIM)
+```
+#Regression and residuals
+```{R}
+regr <- lm(formula = G ~ TOI + PIM, data = skater)
+summary(regr)
+residuals <- data.table(residuals = regr$residuals, fitted = regr$fitted)
+ggplot(residuals, aes(fitted, residuals)) + geom_point(alpha = .3) +
+theme_minimal()
+```
+#A hibatagok nem tudom, hogy randomnak tűnnek e. Mivel a PIM nem tűnik lineárisan összefüggőnek G-vel, hozzáadunk PIM négyzetet. 
+
+```{R}
+regr <- lm(formula = G ~ TOI + PIM + I(PIM^2), data = skater)
+summary(regr)
+```
+#Így PIM-re alacsonyabb lett a p-érték. 
+
+#Interakció hozzáadása
+```{R}
+regr <- lm(formula = G ~ TOI + PIM + I(PIM^2)+ PIM*TOI, data = skater)
+summary(regr)
+```
+#Értelmezés, hogyan illeszkedik, miért gyenge? 
+#Válasz az alapkérdésre
+```{R}
+```
