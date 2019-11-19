@@ -6,7 +6,7 @@ output: html_document
 ```{R}
 library(data.table)
 library(ggplot2)
-skater <- fread("data/clean_nhl.csv")
+skater <- fread("../nhl_data/clean_nhl.csv")
 ```
 #Alapkérdés: hatékonyabb-e egy agresszívabb hoki játékos az NHL-ben? A feltevésünk, hogy az aggresszívabb játékosok kevésbé hatékonyak.
 #Az aggresszivitás nem mért mennyiség, de a kiállítások száma (PIM - Penalty in minutes) lehet a mércéje, mert a kiállítások száma utalhat agresszivitásra. Ezen felül a modellbe beletesszük magyarázó változóként a szezon során jégen töltött időt (TOI - Time on ice) mivel az erősen pozitívan összefügg a gólok számával, és kihagyása torzítaná az eredményt.
@@ -18,7 +18,6 @@ skater <- fread("data/clean_nhl.csv")
 ```{R}
 ggplot(skater, aes(TOI, PIM)) + geom_point() + theme_minimal()
 ggplot(skater, aes(TOI, PTS)) + geom_point() + theme_minimal()
-
 ggplot(skater, aes(PIM, PTS)) + geom_point() + theme_minimal()
 ggplot(skater, aes(TOI, PlusMinus)) + geom_point() + theme_minimal()
 ggplot(skater, aes(PIM, PlusMinus)) + geom_point() + theme_minimal()
@@ -72,7 +71,6 @@ theme_minimal()
 ```
 # A regresszió együtthatói nagyon szignifikánsak. A modell így számunkra megfelelően leírja az összefüggést.
 #A hibatagok szóródása nem egyenletes. 
-
 
 #Interakció hozzáadása
 ```{R}
