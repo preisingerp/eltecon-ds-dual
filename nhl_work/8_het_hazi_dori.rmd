@@ -8,44 +8,86 @@ library(data.table)
 library(ggplot2)
 skater <- fread("data/clean_nhl.csv")
 ```
-#A feladat során azt próbáljuk megjósolni, hogy az adott játékos várhatóan hány gólt (G) fog szerezni. Ehhez TOI (total time on ice by that player in season) és a PIM (penalties in minutes/player in season) magyarázó változókat használjuk.
+#Alapkérdés: hatékonyabb-e egy agresszívabb hoki játékos az NHL-ben? A feltevésünk, hogy az aggresszívabb játékosok kevésbé hatékonyak.
+#Az aggresszivitás nem mért mennyiség, de a kiállítások száma (PIM - Penalty in minutes) lehet a mércéje, mert a kiállítások száma utalhat agresszivitásra. Ezen felül a modellbe beletesszük magyarázó változóként a szezon során jégen töltött időt (TOI - Time on ice) mivel az erősen pozitívan összefügg a gólok számával, és kihagyása torzítaná az eredményt.
+#Egy játékos hatékonyságát háromféleképp is mérhetjük. A szezon alatt szerzett gólok száma (G) egyszerű mutató. Ennél kifinomultabb a PTS, amiben a belőtt gólok mellett a gólpasszok is számítva vannak. Egy másik lehetőség, hogy a jégen töltött idő alatt a csapat által lőtt és csapat által kapott gólokat nézzük meg, ami egy hatékonyan védekező, de keveset támadó játékosnál lényegesebb mutató. Probléma lehet itt, hogy ez minden csapattagtól függ, így ha egy hatékony és egy nem hatékony játékos folyton együtt van jégen, kiegyenlítik egymás hatását.
+#Mi a PTS és PlusMinus változót fogjuk a  PIM-mel és TOI-val regresszálni.
 
 #Plots
+#Kirajzoljuk a magyarázó és függő változók egymáshoz való viszonyát
 ```{R}
-
-
-#is_c <- data.table[]  C, D, RW, LW--> ez egy POS dummy kezdemény, de belebonyolodtam, úgyhogy hagytam
-ggplot(skater, aes(TOI, G)) + geom_point() + theme_minimal()
-ggplot(skater, aes(Pos, G)) + geom_point() + theme_minimal()
-ggplot(skater, aes(PIM, G)) + geom_point() + theme_minimal()
 ggplot(skater, aes(TOI, PIM)) + geom_point() + theme_minimal()
+ggplot(skater, aes(TOI, PTS)) + geom_point() + theme_minimal()
+
+ggplot(skater, aes(PIM, PTS)) + geom_point() + theme_minimal()
+ggplot(skater, aes(TOI, PlusMinus)) + geom_point() + theme_minimal()
+ggplot(skater, aes(PIM, PlusMinus)) + geom_point() + theme_minimal()
+ggplot(skater, aes(PTS, PlusMinus)) + geom_point() + theme_minimal()
+
 ```
+#A razjokból néhány dolog szembetűnő
+#Alacsony TOI mellett lehetséges PIM = 0, de egy bizonyos szint felett már szinte lehetetlen. Azaz aki sokat van jégen, szinte biztosan kap büntetést.
+#A PTS nagyon erősen függ a TOI-tól. A grafikon különleges alakú, két nagy felhő figyelhető meg rajta. Ezek nagyon valószínű, hogy a játékos pozíciójára utalnak, tehát egy támadó játékos fog több pontot szerezni. Ezt a továbbiakban még megvizsgáljuk majd.
+#A PTS a PIM függvényében egy sajátos csúcsot mutat alacsony értékek mellett amiről nehéz megmondani, hogy pozitív vagy negatív összefüggést takar.
+#A PlusMinus a PTS nem tűnik túl erősen összefüggőnek, ami érdekes, mert elvileg mindkettő a hatékonyságot fejezi ki.
+
+#Plots 2
+```{R}
+ggplot(skater[Pos=='C'], aes(TOI, PTS)) + geom_point() + theme_minimal()
+ggplot(skater[Pos=='RW'], aes(TOI, PTS)) + geom_point() + theme_minimal()
+ggplot(skater[Pos=='LW'], aes(TOI, PTS)) + geom_point() + theme_minimal()
+ggplot(skater[Pos=='D'], aes(TOI, PTS)) + geom_point() + theme_minimal()
+```
+# Ezeken a grafikonokon nyilvánvalóan látszik, hogy a pozíciótól függ, mennyi pontot szerez egy játékos, mert a szétszedett plotokon az előbb látott kettéágazás már nem látható.
+# A továbbiakban csak a Center játékosok hatékonyságát fogjuk vizsgálni, hogy a kettéágazás kevésbé zavarjon bele az eredményekbe.
+
+#Plots 3
+```{R}
+ggplot(skater[Pos=='C'], aes(TOI, PIM)) + geom_point() + theme_minimal()
+ggplot(skater[Pos=='C'], aes(TOI, PTS)) + geom_point() + theme_minimal()
+ggplot(skater[Pos=='C'], aes(PIM, PTS)) + geom_point() + theme_minimal()
+ggplot(skater[Pos=='C'], aes(TOI, PlusMinus)) + geom_point() + theme_minimal()
+ggplot(skater[Pos=='C'], aes(PIM, PlusMinus)) + geom_point() + theme_minimal()
+ggplot(skater[Pos=='C'], aes(PTS, PlusMinus)) + geom_point() + theme_minimal()
+
+```
+# Most csak a centerek eredményeit rajzoltuk ki. A ponthalmazok jellege ugyanolyan marad (a PTS-TOI függvényt leszámítva).
+
 #Correlation
 ```{R}
+skater <- skater[Pos=='C']
 cor(skater$TOI,skater$PIM)
+cor(skater$PTS,skater$PlusMinus)
 ```
+#TOI és PIM között pozitív a korreláció, ami logikus, hiszen aki többet van pályán, azt nagyobb eséllyel állítják ki.
+#PTS és PlusMinus között is pozitív a korreláció, ami szerencsés mert mindkettő a hatékonyságtól kéne, hogy függjön. Érdekes viszont, hogy mennyire gyenge az összefüggés közöttük. Azaz sok minden befolyásolja még ezt a két változót a hatékonyságon kívül.
+
 #Regression and residuals
 ```{R}
-regr <- lm(formula = G ~ TOI + PIM, data = skater)
+regr <- lm(formula = PTS ~ TOI + PIM, data = skater)
 summary(regr)
 residuals <- data.table(residuals = regr$residuals, fitted = regr$fitted)
 ggplot(residuals, aes(fitted, residuals)) + geom_point(alpha = .3) +
 theme_minimal()
 ```
-#A hibatagok nem tudom, hogy randomnak tűnnek e. Mivel a PIM nem tűnik lineárisan összefüggőnek G-vel, hozzáadunk PIM négyzetet. 
+# A regresszió együtthatói nagyon szignifikánsak. A modell így számunkra megfelelően leírja az összefüggést.
+#A hibatagok szóródása nem egyenletes. 
 
-```{R}
-regr <- lm(formula = G ~ TOI + PIM + I(PIM^2), data = skater)
-summary(regr)
-```
-#Így PIM-re alacsonyabb lett a p-érték. 
 
 #Interakció hozzáadása
 ```{R}
-regr <- lm(formula = G ~ TOI + PIM + I(PIM^2)+ PIM*TOI, data = skater)
+regr <- lm(formula = PTS ~ TOI + PIM + PIM*TOI, data = skater)
 summary(regr)
 ```
-#Értelmezés, hogyan illeszkedik, miért gyenge? 
-#Válasz az alapkérdésre
+#Az interakció bétája is szignifikáns.
+#A fő kérdés a PIM bétája, ami negatív. Ez arra utal, hogy a több büntetésben töltött perc kevesebb pontot eredményez.
+
+#Regression 2
 ```{R}
+regr <- lm(formula = PlusMinus ~ TOI + PIM + PIM*TOI, data = skater)
+summary(regr)
 ```
+# A másik választot hatékonysági mutatóra (PlusMinus) is felírtuk a PTS-re alkalmazott regressziót. Ebben is látható, hogy a PIM bétája negatív, vagyis a több büntetésben töltött perc ezt változót is negatívan befolyásolja.
+# Itt is minden együttható szignifikáns volt.
+
+#Válasz az alapkérdésre: A hipotézis helyesnek tűnik, az játékosok aggresszivitási mutatója negatívan függ össze a hatékonysági mutatókkal.
