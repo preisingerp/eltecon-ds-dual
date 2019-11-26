@@ -1,0 +1,106 @@
+---
+title: "5. házi"
+output: html_document
+---
+
+#Alapkérdés a 4. háziból: hatékonyabb-e egy agresszívabb hoki játékos az NHL-ben? A feltevésünk, hogy az aggresszívabb játékosok kevésbé hatékonyak.
+#Az aggresszivitás nem mért mennyiség, de a kiállítások száma (PIM - Penalty in minutes) lehet a mércéje, mert a kiállítások száma utalhat agresszivitásra. 
+#Egy játékos hatékonyságát a PTS változóval mérjük, ami a belőtt gólok és a gólpasszok összegét jelenti.
+#Mi a PTS változót fogjuk PIM különböző hatványaival regresszálni és ezeknek ha hibáit vizsgáljuk meg. 
+
+#A megoldást innentől angolul írjuk.
+
+#Set up data and others
+```{R}
+library(data.table)
+library(ggplot2)
+library(purrr)
+library(caret)
+
+skater <- fread("data/clean_nhl.csv")
+skater <- skater[Pos=='C']
+```
+
+
+#Create splitting indices for train, test and cross-validation
+```{R}
+n <- skater[,.N,]
+fold <- 7
+cv_split <- split(sample(1:n), 1:fold)
+train_split <- split(sample(1:n), 1:fold)[1]
+```
+
+#Create candidate models with increasing complexity
+```{R}
+complexity_levels <- 8
+formula_strings <- c() # vector that will contain all formulas
+for (i in c(1:complexity_levels)) { # with the help of this loop we fill up the formula list
+  formula_single <- c("PTS ~ ")
+  for (j in c(1:i)) {
+  addtext <- paste("+ I(PIM^",toString(j),") ",sep = "")
+    formula_single <- paste(formula_single,addtext, sep = "", collapse = NULL)
+  }
+  formula_strings <- c(formula_strings,formula_single)
+}
+formula_strings
+```
+
+```{R}
+
+# Create empty vectors that will store the 3 types of calculated errors for each model complexity level
+train_errors <-c()
+test_errors <-c()
+cv_errors <-c()
+
+# Go through every complexity level in a for loop
+for(formula_string in formula_strings){
+formula <- as.formula(formula_string)
+
+# Calculate error for train data set for current level of model complexity
+train_error_list <- map(train_split, ~{
+  model <- lm(formula = formula, data = skater[-.x,])  
+  p <- predict(model, newdata = skater[-.x,])
+  mean((p - skater[-.x, PTS])^2)
+})
+train_error <- train_error_list[1]
+
+# Calculate error for test data set for current level of model complexity
+test_error_list <- map(train_split, ~{
+  model <- lm(formula = formula, data = skater[-.x,])  
+  p <- predict(model, newdata = skater[.x,])
+  mean((p - skater[.x, PTS])^2)
+})
+test_error <- test_error_list[1]
+
+# Calculate error of cross-validation for current level of model complexity
+cv_error_list <- map(cv_split, ~{
+  model <- lm(formula = formula, data = skater[-.x,])  
+  p <- predict(model, newdata = skater[.x,])
+  mean((p - skater[.x, PTS])^2)
+})
+cv_error <- mean(unlist(cv_error_list))
+
+# Append all 3 errors to lists in order to save them for later
+train_errors <-c(train_errors,train_error)
+test_errors <-c(test_errors,test_error)
+cv_errors <-c(cv_errors,cv_error)
+
+}
+# End of for loop
+
+#Construct data table from the error results
+complexity_errors <- data.table(train = train_errors, test = test_errors, cv = cv_errors)
+```
+
+
+#Plot the resulting errors
+```{R}
+plot(c(1:complexity_levels),train_errors, log = "y")
+plot(c(1:complexity_levels),test_errors, log = "y")
+plot(c(1:complexity_levels),cv_errors, log = "y")
+
+```
+
+#Conclusion from errors:
+#We have ran the full analysis with several random splittings for each of the tests. They are giving different results for optimal complexity, but it is usually between 3 and 6
+#From there results we decided to choose a middle ground of complexity level 4. Thus the best model formula is: PTS ~ + I(PIM^1) + I(PIM^2) + I(PIM^3) + I(PIM^4) 
