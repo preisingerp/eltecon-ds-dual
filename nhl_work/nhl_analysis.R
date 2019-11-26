@@ -7,7 +7,7 @@ library(ggplot2)
 # player_list <- read_excel("nhl_data/nhl_skaterstats.xlsx", sheet = 2)
 # team_list <- read_excel("nhl_data/nhl_skaterstats.xlsx", sheet = 3)
 # pos_list <- read_excel("nhl_data/nhl_skaterstats.xlsx", sheet = 4)
-skater_stats <- fread("nhl_data/skater_stats.csv")
+skater_stats <- fread("../nhl_data/skater_stats.csv")
 
 # summary(skater_stats)
 
@@ -56,10 +56,10 @@ skater_stats$HIT[is.na(skater_stats$HIT)] <- 0
 skater_stats$FOwin[is.na(skater_stats$FO_perc)] <- NA
 skater_stats$FOloss[is.na(skater_stats$FO_perc)] <- NA
 
-write.csv(skater_stats, file = "clean_nhl.csv")
+write.csv(skater_stats, file = "../nhl_data/clean_nhl.csv")
 
 summary(skater_stats)
 
 # Plots
-ggplot(skater_stats, aes(TOI, PTS)) + geom_point() + scale_x_chron()
-ggplot(skater_stats, aes(FOwin + FOloss, FO_perc)) + geom_point()
+#ggplot(skater_stats, aes(TOI, PTS)) + geom_point() + scale_x_chron()
+#ggplot(skater_stats, aes(FOwin + FOloss, FO_perc)) + geom_point()

@@ -6,6 +6,7 @@ output: html_document
 ```{R}
 library(data.table)
 library(ggplot2)
+source("nhl_analysis.R")
 skater <- fread("../nhl_data/clean_nhl.csv")
 ```
 #Alapkérdés: hatékonyabb-e egy agresszívabb hoki játékos az NHL-ben? A feltevésünk, hogy az aggresszívabb játékosok kevésbé hatékonyak.
