@@ -1,0 +1,87 @@
+---
+title: "NHL"
+author: "Preisinger Péter"
+date: '2019 12 19 '
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+```
+## The big idea
+
+- We had data from NHL players and the final result for the seasons
+- We wanted to predict the goals scored by a given team based on the player statistics
+- For testing we used the team **Las Vegas Knights** as they were a newcomer in the 2018 season
+- Yes, we are aware that using team data would have been easier, but our goal is to get macro results from micro data
+
+
+## Data cleaning
+
+- During this step we converted data types to numeric where neccessary
+- We also replaced *NA*-s with *0*-s where it made sense
+- And finally we removed lines where there was data missing *(such as a person with age = 0)*
+- After all of this we grouped the data according to teams
+
+
+```{r data cleaning and organizing, echo = FALSE, warning = FALSE}
+skater_stats <- fread("../nhl_data/skater_stats.csv")
+skater_stats$V1 <- NULL
+setnames(skater_stats, c("+/-", "S%", "FO%"), c("PlusMinus", "S_perc", "FO_perc"))
+skater_stats <- skater_stats[Season >= 2008]
+cols_to_convert <- c("G", "PTS", "PlusMinus", "A", "PIM", "EVG", "PPG", "SHG", "GWG", "EVA", "PPA", "SHA", "S", "S_perc")
+skater_stats[, (cols_to_convert) := lapply(.SD, as.numeric), .SDcols = cols_to_convert]
+skater_stats$TOI = gsub(",", "", skater_stats$TOI)
+skater_stats[, TOI := as.numeric(TOI)]
+skater_stats[, ATOI := TOI/GP]
+skater_stats$G[is.na(skater_stats$G)] <- 0
+skater_stats$A[is.na(skater_stats$A)] <- 0
+skater_stats$PTS[is.na(skater_stats$PTS)] <- 0
+skater_stats$PlusMinus[is.na(skater_stats$PlusMinus)] <- 0
+skater_stats$PIM[is.na(skater_stats$PIM)] <- 0
+skater_stats$EVG[is.na(skater_stats$EVG)] <- 0
+skater_stats$PPG[is.na(skater_stats$PPG)] <- 0
+skater_stats$SHG[is.na(skater_stats$SHG)] <- 0
+skater_stats$GWG[is.na(skater_stats$GWG)] <- 0
+skater_stats$EVA[is.na(skater_stats$EVA)] <- 0
+skater_stats$PPA[is.na(skater_stats$PPA)] <- 0
+skater_stats$SHA[is.na(skater_stats$SHA)] <- 0
+skater_stats$S[is.na(skater_stats$S)] <- 0
+skater_stats$S_perc[skater_stats$S == 0] <- NA
+skater_stats$BLK[is.na(skater_stats$BLK)] <- 0
+skater_stats$HIT[is.na(skater_stats$HIT)] <- 0
+skater_stats$FOwin[is.na(skater_stats$FO_perc)] <- NA
+skater_stats$FOloss[is.na(skater_stats$FO_perc)] <- NA
+skater_stats <- skater_stats[!(Pos == "RW/LW")]
+skater_stats <- skater_stats[!(Pos == "LW/RW")]
+skater_stats <- skater_stats[!(Pos == "RW/C")]
+skater_stats <- skater_stats[!(Pos == "C/LW")]
+skater_stats <- skater_stats[!(Pos == "LW/C")]
+skater_stats <- skater_stats[!(Tm == "TOT")]
+skater_stats <- skater_stats[(Age > 0)]
+
+skater_stats %>%
+  group_by(Season, Tm) %>%
+  summarise(Age = mean(Age),
+            GP = mean(GP),
+            G = sum(G),
+            GPG = mean(GPG),
+            A = sum(A),
+            PTS = sum(PTS),
+            PlusMinus_s = sum(PlusMinus),
+            PlusMinus_a = mean(PlusMinus),
+            PIM = sum(PIM)
+            )
+#write.csv(skater_stats, file = "../nhl_data/clean_nhl.csv")
+```
+
+##
+
+```{r pressure}
+
+```
+
