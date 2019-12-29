@@ -64,17 +64,22 @@ skater_stats <- skater_stats[!(Pos == "LW/C")]
 skater_stats <- skater_stats[!(Tm == "TOT")]
 skater_stats <- skater_stats[(Age > 0)]
 
-skater_stats %>%
+data <- skater_stats %>%
   group_by(Season, Tm) %>%
   summarise(Age = mean(Age),
-            GP = mean(GP),
-            G = sum(G),
-            GPG = mean(GPG),
-            A = sum(A),
-            PTS = sum(PTS),
-            PlusMinus_s = sum(PlusMinus),
-            PlusMinus_a = mean(PlusMinus),
-            PIM = sum(PIM)
+            GamesPlayed = mean(GP),
+            Goals = sum(G),
+            Game_per_goal = mean(GPG),
+            Assists = sum(A),
+            Points = sum(PTS),
+            PlusMinus_sum = sum(PlusMinus),
+            PlusMinus_mean = mean(PlusMinus),
+            Penalty_minutes = sum(PIM),
+            Shots = sum(S),
+            Time_on_ice = mean(TOI),
+            Average_time_on_ice = mean(ATOI),
+            Blocks = sum(BLK),
+            Hits = sum(HIT)
             )
 #write.csv(skater_stats, file = "../nhl_data/clean_nhl.csv")
 ```
