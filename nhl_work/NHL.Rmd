@@ -11,12 +11,14 @@ library(data.table)
 library(ggplot2)
 library(dplyr)
 library(magrittr)
+library(caret)
+library(glmnet)
+set.seed(47293542)
 ```
 ## The big idea
 
 - We had data from NHL players and the final result for the seasons
 - We wanted to predict the goals scored by a given team based on the player statistics
-- For testing we used the team **Las Vegas Knights** as they were a newcomer in the 2018 season
 - Yes, we are aware that using team data would have been easier, but our goal is to get macro results from micro data
 
 
@@ -25,7 +27,11 @@ library(magrittr)
 - During this step we converted data types to numeric where neccessary
 - We also replaced *NA*-s with *0*-s where it made sense
 - And finally we removed lines where there was data missing *(such as a person with age = 0)*
+- We also deleted lines referring to the team *TOT* as that is just aggregated data for players
+that changed teams during season
 - After all of this we grouped the data according to teams
+- And made column names easier to understand
+- We also dropped some variables that seemed meaningless in an agragated sense
 
 
 ```{r data cleaning and organizing, echo = FALSE, warning = FALSE}
@@ -56,19 +62,19 @@ skater_stats$BLK[is.na(skater_stats$BLK)] <- 0
 skater_stats$HIT[is.na(skater_stats$HIT)] <- 0
 skater_stats$FOwin[is.na(skater_stats$FO_perc)] <- NA
 skater_stats$FOloss[is.na(skater_stats$FO_perc)] <- NA
-skater_stats <- skater_stats[!(Pos == "RW/LW")]
-skater_stats <- skater_stats[!(Pos == "LW/RW")]
-skater_stats <- skater_stats[!(Pos == "RW/C")]
-skater_stats <- skater_stats[!(Pos == "C/LW")]
-skater_stats <- skater_stats[!(Pos == "LW/C")]
+# skater_stats <- skater_stats[!(Pos == "RW/LW")]
+# skater_stats <- skater_stats[!(Pos == "LW/RW")]
+# skater_stats <- skater_stats[!(Pos == "RW/C")]
+# skater_stats <- skater_stats[!(Pos == "C/LW")]
+# skater_stats <- skater_stats[!(Pos == "LW/C")]
 skater_stats <- skater_stats[!(Tm == "TOT")]
 skater_stats <- skater_stats[(Age > 0)]
 
 data <- skater_stats %>%
   group_by(Season, Tm) %>%
-  summarise(Age = mean(Age),
+  summarise(Goals = sum(G),
+            Age = mean(Age),
             GamesPlayed = mean(GP),
-            Goals = sum(G),
             Game_per_goal = mean(GPG),
             Assists = sum(A),
             Points = sum(PTS),
@@ -81,12 +87,49 @@ data <- skater_stats %>%
             Blocks = sum(BLK),
             Hits = sum(HIT)
             )
-#write.csv(skater_stats, file = "../nhl_data/clean_nhl.csv")
 ```
 
-##
+## Prediction
 
-```{r pressure}
-
+- We decided to use Ridge regression as there are a lot of high collinear variables in our dataset
+- For this part we created the teaching and test groups
+```{r, echo = FALSE}
+index <- sample(1:331, 66)
+test_data <- data[index,]
+teach_data <- data[-index,]
 ```
 
+```{r}
+temp_teach <- subset(teach_data, select = -c(Season, Tm))
+# cor(temp_teach)
+
+# formula1 <- as.formula("Goals ~ Age + GamesPlayed + Game_per_goal +
+#                        Assists + PlusMinus_mean + Penalty_minutes +
+#                        Shots + Average_time_on_ice + Blocks + Hits")
+
+x_var <- data.matrix(teach_data[, c("Age", "GamesPlayed", "Assists", "Points",
+                                    "PlusMinus_mean", "Penalty_minutes", "Shots", 
+                                    "Average_time_on_ice", "Blocks", "Hits")])
+y_var <- data.matrix(teach_data[, "Goals"])
+
+lambda_seq <- 10^seq(2, -2, by = -.1)
+
+fit <- glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
+
+ridge_cv <- cv.glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
+best_lambda <- ridge_cv$lambda.min
+# best_lambda
+best_fit <- ridge_cv$glmnet.fit
+# head(best_fit)
+
+best_ridge <- glmnet(x_var, y_var, alpha = 0, lambda = best_lambda)
+coef(best_ridge)
+
+# pred <- predict(best_ridge, s = best_lambda, newx = test_data) # ERROR: Argument 1 must have names
+# actual <- test_data$Goals
+# preds <- test_data$PredictedGoals
+# rss <- sum((preds - actual)^2)
+# tss <- sum((actual - mean(actual))^2)
+# rsq <- 1 - rss/tss
+# rsq
+```
