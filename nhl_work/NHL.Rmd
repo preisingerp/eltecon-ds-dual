@@ -122,14 +122,19 @@ best_lambda <- ridge_cv$lambda.min
 best_fit <- ridge_cv$glmnet.fit
 # head(best_fit)
 
-best_ridge <- glmnet(x_var, y_var, alpha = 0, lambda = best_lambda)
+model_data <- as.data.frame(cbind(x_var, y_var))
+names(model_data) <- c("Age", "GamesPlayed", "Assists", "Points",
+                                    "PlusMinus_mean", "Penalty_minutes", "Shots", 
+                                    "Average_time_on_ice", "Blocks", "Hits", "Goals")
+
+best_ridge <- glm(Goals ~., data = model_data)
 coef(best_ridge)
 
-# pred <- predict(best_ridge, s = best_lambda, newx = test_data) # ERROR: Argument 1 must have names
-# actual <- test_data$Goals
-# preds <- test_data$PredictedGoals
-# rss <- sum((preds - actual)^2)
-# tss <- sum((actual - mean(actual))^2)
-# rsq <- 1 - rss/tss
-# rsq
+pred <- predict(best_ridge, s = best_lambda, newx = test_data)
+actual <- test_data$Goals
+preds <- test_data$PredictedGoals
+rss <- sum((preds - actual)^2)
+tss <- sum((actual - mean(actual))^2)
+rsq <- 1 - rss/tss
+rsq
 ```
