@@ -3,8 +3,6 @@ library(data.table)
 #library(chron)
 library(ggplot2)
 
-skater_stats <- fread("data/skater_stats.csv")
-
 # skater_stats <- read_excel("nhl_data/nhl_skaterstats.xlsx", sheet = 1)
 # player_list <- read_excel("nhl_data/nhl_skaterstats.xlsx", sheet = 2)
 # team_list <- read_excel("nhl_data/nhl_skaterstats.xlsx", sheet = 3)

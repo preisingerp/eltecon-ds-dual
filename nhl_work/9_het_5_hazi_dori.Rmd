@@ -17,7 +17,8 @@ library(ggplot2)
 library(purrr)
 library(caret)
 
-skater <- fread("data/clean_nhl.csv")
+source("nhl_analysis.R")
+skater <- fread("../nhl_data/clean_nhl.csv")
 skater <- skater[Pos=='C']
 ```
 
