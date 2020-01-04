@@ -13,7 +13,7 @@ library(dplyr)
 library(magrittr)
 library(caret)
 library(glmnet)
-set.seed(47293542)
+set.seed(123456789)
 ```
 ## The big idea
 
@@ -44,6 +44,7 @@ skater_stats[, (cols_to_convert) := lapply(.SD, as.numeric), .SDcols = cols_to_c
 skater_stats$TOI = gsub(",", "", skater_stats$TOI)
 skater_stats[, TOI := as.numeric(TOI)]
 skater_stats[, ATOI := TOI/GP]
+# ebből még fgvt kell csinálni
 skater_stats$G[is.na(skater_stats$G)] <- 0
 skater_stats$A[is.na(skater_stats$A)] <- 0
 skater_stats$PTS[is.na(skater_stats$PTS)] <- 0
@@ -93,13 +94,17 @@ data <- skater_stats %>%
 
 - We decided to use Ridge regression as there are a lot of high collinear variables in our dataset
 - For this part we created the teaching and test groups
+- We used correlation to throw out variables which were basically recording the same data
+
+**változók értelmezése ide**
+
 ```{r, echo = FALSE}
 index <- sample(1:331, 66)
 test_data <- data[index,]
 teach_data <- data[-index,]
 ```
 
-```{r}
+```{r 1st try}
 temp_teach <- subset(teach_data, select = -c(Season, Tm))
 # cor(temp_teach)
 
@@ -112,29 +117,99 @@ x_var <- data.matrix(teach_data[, c("Age", "GamesPlayed", "Assists", "Points",
                                     "Average_time_on_ice", "Blocks", "Hits")])
 y_var <- data.matrix(teach_data[, "Goals"])
 
+model_data <- as.data.frame(cbind(x_var, y_var))
+names(model_data) <- c("Age", "GamesPlayed", "Assists", "Points", 
+                       "PlusMinus_mean", "Penalty_minutes", "Shots", 
+                       "Average_time_on_ice", "Blocks", "Hits", "Goals")
+
+# linearmodel <- lm(Goals ~., data = model_data)
+# test_data$PredictedGoals <- predict(linearmodel, newdata = test_data)
+
 lambda_seq <- 10^seq(2, -2, by = -.1)
 
 fit <- glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
-
 ridge_cv <- cv.glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
 best_lambda <- ridge_cv$lambda.min
 # best_lambda
 best_fit <- ridge_cv$glmnet.fit
 # head(best_fit)
 
-model_data <- as.data.frame(cbind(x_var, y_var))
-names(model_data) <- c("Age", "GamesPlayed", "Assists", "Points",
-                                    "PlusMinus_mean", "Penalty_minutes", "Shots", 
-                                    "Average_time_on_ice", "Blocks", "Hits", "Goals")
-
 best_ridge <- glm(Goals ~., data = model_data)
 coef(best_ridge)
 
-pred <- predict(best_ridge, s = best_lambda, newx = test_data)
+test_data$PredictedGoals <- predict(best_ridge, newdata = test_data)
 actual <- test_data$Goals
 preds <- test_data$PredictedGoals
 rss <- sum((preds - actual)^2)
 tss <- sum((actual - mean(actual))^2)
 rsq <- 1 - rss/tss
 rsq
+
+summary(best_ridge)
+```
+
+- As the r squared value was 1 we suspected there might be variables that  allow for perfect prediction
+- After a while we realized that indeed that was the case, *(Substracting the number of Assists from the number of Points you get the number of Goals)* so we removed one of these varibles to give the model a challange
+- First we removed *Assists* then as the r squared values was still too close to 1 we removed *Points* as well
+
+```{r w/out Assists}
+# Without Assists
+x_var <- data.matrix(teach_data[, c("Age", "GamesPlayed", "Points",
+                                    "PlusMinus_mean", "Penalty_minutes", "Shots", 
+                                    "Average_time_on_ice", "Blocks", "Hits")])
+model_data$Assists <- NULL
+
+fit <- glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
+ridge_cv <- cv.glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
+best_lambda <- ridge_cv$lambda.min
+# best_lambda
+best_fit <- ridge_cv$glmnet.fit
+# head(best_fit)
+
+best_ridge <- glm(Goals ~., data = model_data)
+coef(best_ridge)
+
+test_data$PredictedGoals <- predict(best_ridge, newdata = test_data)
+actual <- test_data$Goals
+preds <- test_data$PredictedGoals
+rss <- sum((preds - actual)^2)
+tss <- sum((actual - mean(actual))^2)
+rsq <- 1 - rss/tss
+rsq
+
+summary(best_ridge)
+```
+```{r w/out Assists and Points}
+# Without Assists and Points
+
+x_var <- data.matrix(teach_data[, c("Age", "GamesPlayed","PlusMinus_mean",
+                                    "Penalty_minutes", "Shots", 
+                                    "Average_time_on_ice", "Blocks", "Hits")])
+model_data$Points <- NULL
+
+fit <- glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
+ridge_cv <- cv.glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
+best_lambda <- ridge_cv$lambda.min
+# best_lambda
+best_fit <- ridge_cv$glmnet.fit
+# head(best_fit)
+
+best_ridge <- glm(Goals ~., data = model_data)
+coef(best_ridge)
+
+test_data$PredictedGoals <- predict(best_ridge, newdata = test_data)
+actual <- test_data$Goals
+preds <- test_data$PredictedGoals
+rss <- sum((preds - actual)^2)
+tss <- sum((actual - mean(actual))^2)
+rsq <- 1 - rss/tss
+rsq
+
+summary(best_ridge)
+```
+
+```{r ábrák}
+# olyan ábra, amin látszik, az összes gól (db) és más színnel a test adatsor
+# test valós gólok vs predicted gólok
+# ami még eszünkbe jut
 ```
