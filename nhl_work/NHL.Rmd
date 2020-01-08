@@ -40,36 +40,38 @@ skater_stats$V1 <- NULL
 setnames(skater_stats, c("+/-", "S%", "FO%"), c("PlusMinus", "S_perc", "FO_perc"))
 skater_stats <- skater_stats[Season >= 2008]
 cols_to_convert <- c("G", "PTS", "PlusMinus", "A", "PIM", "EVG", "PPG", "SHG", "GWG", "EVA", "PPA", "SHA", "S", "S_perc")
+cols_na2zero <- c("G", "PTS", "PlusMinus", "A", "PIM", "EVG", "PPG", "SHG", "GWG", "EVA", "PPA", "SHA", "S", "BLK", "HIT")
 skater_stats[, (cols_to_convert) := lapply(.SD, as.numeric), .SDcols = cols_to_convert]
 skater_stats$TOI = gsub(",", "", skater_stats$TOI)
 skater_stats[, TOI := as.numeric(TOI)]
 skater_stats[, ATOI := TOI/GP]
+skater_stats[is.na(skater_stats)] <- 0 # ez csinál mindent nullává, a többi innentől nem kell
 # ebből még fgvt kell csinálni
-skater_stats$G[is.na(skater_stats$G)] <- 0
-skater_stats$A[is.na(skater_stats$A)] <- 0
-skater_stats$PTS[is.na(skater_stats$PTS)] <- 0
-skater_stats$PlusMinus[is.na(skater_stats$PlusMinus)] <- 0
-skater_stats$PIM[is.na(skater_stats$PIM)] <- 0
-skater_stats$EVG[is.na(skater_stats$EVG)] <- 0
-skater_stats$PPG[is.na(skater_stats$PPG)] <- 0
-skater_stats$SHG[is.na(skater_stats$SHG)] <- 0
-skater_stats$GWG[is.na(skater_stats$GWG)] <- 0
-skater_stats$EVA[is.na(skater_stats$EVA)] <- 0
-skater_stats$PPA[is.na(skater_stats$PPA)] <- 0
-skater_stats$SHA[is.na(skater_stats$SHA)] <- 0
-skater_stats$S[is.na(skater_stats$S)] <- 0
-skater_stats$S_perc[skater_stats$S == 0] <- NA
-skater_stats$BLK[is.na(skater_stats$BLK)] <- 0
-skater_stats$HIT[is.na(skater_stats$HIT)] <- 0
-skater_stats$FOwin[is.na(skater_stats$FO_perc)] <- NA
-skater_stats$FOloss[is.na(skater_stats$FO_perc)] <- NA
-# skater_stats <- skater_stats[!(Pos == "RW/LW")]
-# skater_stats <- skater_stats[!(Pos == "LW/RW")]
-# skater_stats <- skater_stats[!(Pos == "RW/C")]
-# skater_stats <- skater_stats[!(Pos == "C/LW")]
-# skater_stats <- skater_stats[!(Pos == "LW/C")]
-skater_stats <- skater_stats[!(Tm == "TOT")]
-skater_stats <- skater_stats[(Age > 0)]
+# skater_stats$G[is.na(skater_stats$G)] <- 0
+# skater_stats$PTS[is.na(skater_stats$PTS)] <- 0
+# skater_stats$PlusMinus[is.na(skater_stats$PlusMinus)] <- 0
+# skater_stats$A[is.na(skater_stats$A)] <- 0
+# skater_stats$PIM[is.na(skater_stats$PIM)] <- 0
+# skater_stats$EVG[is.na(skater_stats$EVG)] <- 0
+# skater_stats$PPG[is.na(skater_stats$PPG)] <- 0
+# skater_stats$SHG[is.na(skater_stats$SHG)] <- 0
+# skater_stats$GWG[is.na(skater_stats$GWG)] <- 0
+# skater_stats$EVA[is.na(skater_stats$EVA)] <- 0
+# skater_stats$PPA[is.na(skater_stats$PPA)] <- 0
+# skater_stats$SHA[is.na(skater_stats$SHA)] <- 0
+# skater_stats$S[is.na(skater_stats$S)] <- 0
+# skater_stats$S_perc[skater_stats$S == 0] <- NA
+# skater_stats$BLK[is.na(skater_stats$BLK)] <- 0
+# skater_stats$HIT[is.na(skater_stats$HIT)] <- 0
+# skater_stats$FOwin[is.na(skater_stats$FO_perc)] <- NA
+# skater_stats$FOloss[is.na(skater_stats$FO_perc)] <- NA
+# # skater_stats <- skater_stats[!(Pos == "RW/LW")]
+# # skater_stats <- skater_stats[!(Pos == "LW/RW")]
+# # skater_stats <- skater_stats[!(Pos == "RW/C")]
+# # skater_stats <- skater_stats[!(Pos == "C/LW")]
+# # skater_stats <- skater_stats[!(Pos == "LW/C")]
+# skater_stats <- skater_stats[!(Tm == "TOT")]
+# # skater_stats <- skater_stats[(Age > 0)]
 
 data <- skater_stats %>%
   group_by(Season, Tm) %>%
@@ -210,6 +212,11 @@ summary(best_ridge)
 
 ```{r ábrák}
 # olyan ábra, amin látszik, az összes gól (db) és más színnel a test adatsor
+ggplot(teach_data,aes(Age,Goals)) +geom_point() +geom_point(data=test_data,colour='red')
 # test valós gólok vs predicted gólok
 # ami még eszünkbe jut
+```
+
+```{r ábrák}
+skater_stats[PIM]
 ```
