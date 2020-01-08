@@ -93,7 +93,7 @@ data <- skater_stats %>%
 ## Prediction
 
 - We decided to use Ridge regression as there are a lot of high collinear variables in our dataset
-- For this part we created the teaching and test groups
+- For this part we created the teaching and test groups (80:20)
 - We used correlation to throw out variables which were basically recording the same data
 
 **változók értelmezése ide**
