@@ -1,7 +1,8 @@
 ---
-title: "NHL"
-author: "Preisinger Péter"
-date: '2019 12 19 '
+title: "Data Science semester project"
+subtitle: "Predicting goals scored in a season by NHL teams"
+author: "Barát Dóra and Preisinger Péter"
+date: '2019.12.19. - 2020.01.08.'
 output: html_document
 ---
 
@@ -17,10 +18,10 @@ set.seed(123456789)
 ```
 ## The big idea
 
-- We had data from NHL players and the final result for the seasons
+- We had data from NHL players
+  - NHL is the north american first league for hockey; NHL stands for National Hockey League
 - We wanted to predict the goals scored by a given team based on the player statistics
 - Yes, we are aware that using team data would have been easier, but our goal is to get macro results from micro data
-
 
 ## Data cleaning
 
@@ -34,51 +35,39 @@ that changed teams during season
 - And made column names easier to understand
 - We also dropped some variables that seemed meaningless in an agragated sense
 
-
-```{r data cleaning and organizing, echo = FALSE, warning = FALSE}
+```{r data cleaning and organizing, warning = FALSE}
+# reading in the data
 skater_stats <- fread("../nhl_data/skater_stats.csv")
+
+# cleaning the data
 skater_stats$V1 <- NULL
 setnames(skater_stats, c("+/-", "S%", "FO%"),
          c("PlusMinus", "S_perc", "FO_perc"))
+
 skater_stats <- skater_stats[Season >= 2008]
-cols_to_convert <- c("G", "PTS", "PlusMinus", "A",
+
+cols_to_numeric <- c("G", "PTS", "PlusMinus", "A",
                      "PIM", "EVG", "PPG", "SHG", "GWG",
                      "EVA", "PPA", "SHA", "S", "S_perc")
+
 cols_na2zero <- c("G", "PTS", "PlusMinus", "A", "PIM",
                   "EVG", "PPG", "SHG", "GWG", "EVA",
                   "PPA", "SHA", "S", "BLK", "HIT")
-skater_stats[, (cols_to_convert) := lapply(.SD, as.numeric), .SDcols = cols_to_convert]
+
+# as some columns are not in numeric format we changed them where sensible
+skater_stats[, (cols_to_numeric) := lapply(.SD, as.numeric), .SDcols = cols_to_numeric]
+
+# the columns working with on ice time need to be converted as well
 skater_stats$TOI = gsub(",", "", skater_stats$TOI)
 skater_stats[, TOI := as.numeric(TOI)]
 skater_stats[, ATOI := TOI/GP]
-skater_stats[is.na(skater_stats)] <- 0 # ez csinál mindent nullává, a többi innentől nem kell
-# ebből még fgvt kell csinálni
-# skater_stats$G[is.na(skater_stats$G)] <- 0
-# skater_stats$PTS[is.na(skater_stats$PTS)] <- 0
-# skater_stats$PlusMinus[is.na(skater_stats$PlusMinus)] <- 0
-# skater_stats$A[is.na(skater_stats$A)] <- 0
-# skater_stats$PIM[is.na(skater_stats$PIM)] <- 0
-# skater_stats$EVG[is.na(skater_stats$EVG)] <- 0
-# skater_stats$PPG[is.na(skater_stats$PPG)] <- 0
-# skater_stats$SHG[is.na(skater_stats$SHG)] <- 0
-# skater_stats$GWG[is.na(skater_stats$GWG)] <- 0
-# skater_stats$EVA[is.na(skater_stats$EVA)] <- 0
-# skater_stats$PPA[is.na(skater_stats$PPA)] <- 0
-# skater_stats$SHA[is.na(skater_stats$SHA)] <- 0
-# skater_stats$S[is.na(skater_stats$S)] <- 0
-# skater_stats$S_perc[skater_stats$S == 0] <- NA
-# skater_stats$BLK[is.na(skater_stats$BLK)] <- 0
-# skater_stats$HIT[is.na(skater_stats$HIT)] <- 0
-# skater_stats$FOwin[is.na(skater_stats$FO_perc)] <- NA
-# skater_stats$FOloss[is.na(skater_stats$FO_perc)] <- NA
-# # skater_stats <- skater_stats[!(Pos == "RW/LW")]
-# # skater_stats <- skater_stats[!(Pos == "LW/RW")]
-# # skater_stats <- skater_stats[!(Pos == "RW/C")]
-# # skater_stats <- skater_stats[!(Pos == "C/LW")]
-# # skater_stats <- skater_stats[!(Pos == "LW/C")]
+
+# removing unnecesary NA
+skater_stats[is.na(skater_stats)] <- 0
 skater_stats <- skater_stats[!(Tm == "TOT")]
 skater_stats <- skater_stats[(Age > 0)]
 
+# selecting, grouping and reorganizing data columns that will be used
 data <- skater_stats %>%
   group_by(Season, Tm) %>%
   summarise(Goals = sum(G),
@@ -102,7 +91,7 @@ data <- skater_stats %>%
 
 - We decided to use Ridge regression as there are a lot of high collinear variables in our dataset
 - For this part we created the teaching and test groups (80:20)
-- We used correlation to throw out variables which were basically recording the same data
+- We tried to remove variables which were basically recording the same data *(PlusMinus_mean - PlusMinus_sum)*
 
 ## The meaning of the variables
 
@@ -116,24 +105,27 @@ data <- skater_stats %>%
 - *Blocks* is used to show the defensive capabilities of a team
 - *Hits* shows how much physical contact there is when the team is playing
 
-```{r, echo = FALSE}
+```{r dividing the data}
+# creating teaching and test data
 index <- sample(1:331, 66)
 test_data <- data[index,]
 teach_data <- data[-index,]
 
 ggplot(teach_data,aes(Goals)) + geom_histogram(bins = 50) + 
   geom_histogram(data = test_data, aes(alpha = 0.5, fill = "red"), bins = 50, show.legend = FALSE) +
-  theme_minimal()
+  theme_minimal() + ggtitle("Distribution of teach and test datasets") +
+  theme(plot.title = element_text(hjust=0.5))
+# grey is teach_data, red is test_data
 ```
 
-```{r 1st try}
+```{r correlation matrix, include = FALSE}
+# creating correlation matrix
 temp_teach <- subset(teach_data, select = -c(Season, Tm))
 cor(temp_teach)
+```
 
-# formula1 <- as.formula("Goals ~ Age + GamesPlayed + Game_per_goal +
-#                        Assists + PlusMinus_mean + Penalty_minutes +
-#                        Shots + Average_time_on_ice + Blocks + Hits")
-
+```{r 1st model}
+# creating the data matrix for the predictor
 x_var <- data.matrix(teach_data[, c("Age", "GamesPlayed", "Assists", "Points",
                                     "PlusMinus_mean", "Penalty_minutes", "Shots", 
                                     "Average_time_on_ice", "Blocks", "Hits")])
@@ -144,21 +136,15 @@ names(model_data) <- c("Age", "GamesPlayed", "Assists", "Points",
                        "PlusMinus_mean", "Penalty_minutes", "Shots", 
                        "Average_time_on_ice", "Blocks", "Hits", "Goals")
 
-# linearmodel <- lm(Goals ~., data = model_data)
-# test_data$PredictedGoals <- predict(linearmodel, newdata = test_data)
-
+# searching for the best model
 lambda_seq <- 10^seq(2, -2, by = -.1)
-
 fit <- glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
 ridge_cv <- cv.glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
 best_lambda <- ridge_cv$lambda.min
-# best_lambda
 best_fit <- ridge_cv$glmnet.fit
-# head(best_fit)
-
 best_ridge <- glm(Goals ~., data = model_data)
-coef(best_ridge)
 
+# testing with the test data
 test_data$PredictedGoals <- predict(best_ridge, newdata = test_data)
 actual <- test_data$Goals
 preds <- test_data$PredictedGoals
@@ -169,32 +155,34 @@ rsq
 
 summary(best_ridge)
 
+# showing the difference between the prediction and the real numbers
 all.equal(test_data$Goals, test_data$PredictedGoals)
 ggplot(test_data, aes(Goals, PredictedGoals)) + geom_point() +
-  geom_abline(intercept = 0, slope = 1)
+  geom_abline(intercept = 0, slope = 1) +
+  theme_minimal() + theme(plot.title = element_text(hjust=0.5)) +
+  ggtitle("Difference between predicted and real data")
+
 ```
 
-- As the r squared value was 1 we suspected there might be variables that  allow for perfect prediction
+- As the r squared value was 1 we suspected there might be variables that allow for perfect prediction
 - After a while we realized that indeed that was the case, *(Substracting the number of Assists from the number of Points you get the number of Goals)* so we removed one of these varibles to give the model a challange
-- First we removed *Assists* as it is easier to get the number of goals from the number of assists (0-2 assists is added for each goal depending on the play beforehand)
+- First we removed *Assists* as it is easier to get the number of goals from the number of assists (0, 1 or 2 assists are gained for each goal depending on the play beforehand)
 
 ```{r w/out Assists}
-# Without Assists
+# modifying the dataset (removing Assists)
 x_var <- data.matrix(teach_data[, c("Age", "GamesPlayed", "Points",
                                     "PlusMinus_mean", "Penalty_minutes", "Shots", 
                                     "Average_time_on_ice", "Blocks", "Hits")])
 model_data$Assists <- NULL
 
+# searching for the best model
 fit <- glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
 ridge_cv <- cv.glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
 best_lambda <- ridge_cv$lambda.min
-# best_lambda
 best_fit <- ridge_cv$glmnet.fit
-# head(best_fit)
-
 best_ridge <- glm(Goals ~., data = model_data)
-coef(best_ridge)
 
+# testing with the test data
 test_data$PredictedGoals <- predict(best_ridge, newdata = test_data)
 actual <- test_data$Goals
 preds <- test_data$PredictedGoals
@@ -205,31 +193,31 @@ rsq
 
 summary(best_ridge)
 
+# showing the difference between the prediction and the real numbers
 all.equal(test_data$Goals, test_data$PredictedGoals)
 ggplot(test_data, aes(Goals, PredictedGoals)) + geom_point() +
-  geom_abline(intercept = 0, slope = 1)
+  geom_abline(intercept = 0, slope = 1) +
+  theme_minimal() + theme(plot.title = element_text(hjust=0.5)) +
+  ggtitle("Difference between predicted and real data")
 ```
 
 - As the model was still heavily dependent on the *Points* stat and it is highly correlated with the number of goals scored we tried to create one without the *Points* stat
 
 ```{r w/out Assists and Points}
-# Without Assists and Points
-
+# modifying the dataset (removing Points)
 x_var <- data.matrix(teach_data[, c("Age", "GamesPlayed","PlusMinus_mean",
                                     "Penalty_minutes", "Shots", 
                                     "Average_time_on_ice", "Blocks", "Hits")])
 model_data$Points <- NULL
 
+# searching for the best model
 fit <- glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
 ridge_cv <- cv.glmnet(x_var, y_var, alpha = 0, lambda = lambda_seq)
 best_lambda <- ridge_cv$lambda.min
-# best_lambda
 best_fit <- ridge_cv$glmnet.fit
-# head(best_fit)
-
 best_ridge <- glm(Goals ~., data = model_data)
-coef(best_ridge)
 
+# testing with the test data
 test_data$PredictedGoals <- predict(best_ridge, newdata = test_data)
 actual <- test_data$Goals
 preds <- test_data$PredictedGoals
@@ -240,22 +228,15 @@ rsq
 
 summary(best_ridge)
 
+# showing the difference between the prediction and the real numbers
 all.equal(test_data$Goals, test_data$PredictedGoals)
 ggplot(test_data, aes(Goals, PredictedGoals)) + geom_point() +
-  geom_abline(intercept = 0, slope = 1)
+  geom_abline(intercept = 0, slope = 1) +
+  theme_minimal() + theme(plot.title = element_text(hjust=0.5)) +
+  ggtitle("Difference between predicted and real data")
 ```
 
 ## Final model
 
-- We decided to use this final model
-- Although some variables are not significant in our model we believe we shouldn't leave them out as they still carry important information regarding the teams.
-
-```{r ábrák}
-# olyan ábra, amin látszik, az összes gól (db) és más színnel a test adatsor
-ggplot(teach_data,aes(Goals)) + geom_histogram(bins = 50) + 
-  geom_histogram(data = test_data, aes(fill = "red", alpha = 0.5),bins = 50, show.legend = FALSE) +
-  theme_minimal()
-# test valós gólok vs predicted gólok
-ggplot(test_data, aes(Goals, PredictedGoals)) + geom_point() +
-  geom_abline(intercept = 0, slope = 1)
-```
+- We decided to use this as the final model as had the highest number of significant variables while still being accurate
+- Although some variables are still not significant in our model we believe we shouldn't leave them out as they still carry important information regarding the teams
